@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/png" href="/src/assets/hero.png" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="Track real satellites from the documented CelesTrak GP API, inspect exact telemetry, and deploy custom orbital states in a Three.js simulator."
+    />
+    <title>Orbital Mission Console</title>
+  </head>
+  <body>
+    <div id="app"></div>
+
+    <!-- Top Bar - Minimal header with target and status -->
+    <header class="top-bar">
+      <div class="top-bar-left">
+        <h1 class="app-title">Orbital Console</h1>
+        <div id="current-target" class="current-target">
+          <span class="target-label">Tracking:</span>
+          <span id="target-name" class="target-name">ISS</span>
+        </div>
+      </div>
+      <div class="top-bar-right">
+        <div id="unit-badge" class="status-chip">km/s</div>
+        <div id="source-badge" class="status-chip">CelesTrak</div>
+        <div id="state-badge" class="status-chip state-tracked">Tracked</div>
+      </div>
+    </header>
+
+    <!-- Left Rail - Discovery, Presets, Groups, Simulation Controls -->
+    <aside class="left-rail">
+      <div class="left-rail-section">
+        <div class="section-label">Search</div>
+        <input id="search-input" class="search-field" type="text" placeholder="ISS, HUBBLE, 25544..." />
+        <button id="search-button" class="btn-primary btn-sm">Search</button>
+        <select id="search-results" class="search-results-list" size="4" style="display: none;"></select>
+        <button id="load-search-result" class="btn-secondary btn-sm" style="display: none;">Load Result</button>
+      </div>
+
+      <div class="left-rail-section">
+        <div class="section-label">Presets</div>
+        <select id="preset-select" class="select-field"></select>
+        <button id="load-preset-satellite" class="btn-primary btn-sm">Load Preset</button>
+      </div>
+
+      <div class="left-rail-section">
+        <div class="section-label">Groups</div>
+        <select id="group-select" class="select-field"></select>
+        <select id="group-satellite-select" class="select-field" size="5"></select>
+        <button id="load-group-satellite" class="btn-primary btn-sm">Load Group Item</button>
+        <p id="group-status" class="helper-text"></p>
+      </div>
+
+      <div class="left-rail-divider"></div>
+
+      <div class="left-rail-section">
+        <div class="section-label">Simulation Mode</div>
+        <label class="checkbox-label">
+          <input id="paused-toggle" type="checkbox" />
+          <span>Pause</span>
+        </label>
+        <label class="checkbox-label">
+          <input id="follow-toggle" type="checkbox" />
+          <span>Follow</span>
+        </label>
+        <label class="checkbox-label">
+          <input id="imperial-toggle" type="checkbox" />
+          <span>Imperial</span>
+        </label>
+      </div>
+
+      <div class="left-rail-section">
+        <div class="section-label">Time Scale</div>
+        <input id="time-scale" type="range" min="1" max="1000" value="120" class="slider-field" />
+        <div class="time-scale-controls">
+          <div class="slider-value" id="time-scale-display">120×</div>
+          <input id="time-scale-input" type="number" min="1" max="1000" value="120" class="input-field time-scale-input" />
+        </div>
+      </div>
+    </aside>
+
+    <!-- Right Inspector - Object Details, Orbital Elements, Deploy Custom -->
+    <aside class="right-inspector">
+      <div class="inspector-section">
+        <div class="section-label">Object Details</div>
+        <div id="obj-name" class="inspector-value large">--</div>
+        <div id="obj-id" class="inspector-label">NORAD ID: --</div>
+        <div id="obj-epoch" class="inspector-label">Epoch: --</div>
+      </div>
+
+      <div class="inspector-section">
+        <div class="section-label">Orbital Elements</div>
+        <div class="element-row">
+          <div class="element-label">Altitude</div>
+          <div id="alt-value" class="element-value">--</div>
+        </div>
+        <div class="element-row">
+          <div class="element-label">Velocity</div>
+          <div id="speed-value" class="element-value">--</div>
+        </div>
+        <div class="element-row">
+          <div class="element-label">Period</div>
+          <div id="period-value" class="element-value">--</div>
+        </div>
+        <div class="element-row">
+          <div class="element-label">Inclination</div>
+          <div id="orbit-details" class="element-value">--</div>
+        </div>
+        <div class="element-row">
+          <div class="element-label">Apogee/Perigee</div>
+          <div id="apses-value" class="element-value">--</div>
+        </div>
+      </div>
+
+      <div class="inspector-section">
+        <div class="section-label">Position</div>
+        <div id="ground-pos" class="inspector-value">--</div>
+        <div id="state-value" class="inspector-label">--</div>
+      </div>
+
+      <div class="inspector-divider"></div>
+
+      <div class="inspector-section">
+        <div class="section-label">Deploy Custom</div>
+        <label class="inspector-label">
+          <span>Altitude (km)</span>
+          <input id="deploy-altitude" type="number" value="420" min="100" max="10000" step="10" class="input-field" />
+        </label>
+        <label class="inspector-label">
+          <span>Velocity (km/s)</span>
+          <input id="deploy-speed" type="number" value="7.66" min="1" max="20" step="0.01" class="input-field" />
+        </label>
+        <label class="inspector-label">
+          <span>Inclination (°)</span>
+          <input id="deploy-inclination" type="number" value="51.6" min="0" max="180" step="0.1" class="input-field" />
+        </label>
+        <label class="inspector-label">
+          <span>Flight Path (°)</span>
+          <input id="deploy-fpa" type="number" value="0" min="-90" max="90" step="0.1" class="input-field" />
+        </label>
+        <button id="set-circular-speed" class="btn-secondary btn-sm">Circular Speed</button>
+        <button id="deploy-custom" class="btn-primary btn-full">Deploy</button>
+      </div>
+
+      <div class="inspector-section">
+        <button id="clear-trails" class="btn-secondary btn-sm">Clear Trails</button>
+        <button id="reset-view" class="btn-secondary btn-sm">Reset View</button>
+      </div>
+    </aside>
+
+    <!-- Bottom Telemetry Dock - Live Readout Cards -->
+    <footer class="telemetry-dock">
+      <div class="telemetry-card">
+        <div class="telemetry-label">Altitude</div>
+        <div id="dock-alt" class="telemetry-value">--</div>
+      </div>
+      <div class="telemetry-card">
+        <div class="telemetry-label">Velocity</div>
+        <div id="dock-speed" class="telemetry-value">--</div>
+      </div>
+      <div class="telemetry-card">
+        <div class="telemetry-label">Period</div>
+        <div id="dock-period" class="telemetry-value">--</div>
+      </div>
+      <div class="telemetry-card">
+        <div class="telemetry-label">Inclination</div>
+        <div id="dock-incl" class="telemetry-value">--</div>
+      </div>
+      <div class="telemetry-card">
+        <div class="telemetry-label">Sub-Sat Point</div>
+        <div id="dock-ground" class="telemetry-value">--</div>
+      </div>
+      <div class="telemetry-card">
+        <div class="telemetry-label">Time</div>
+        <div id="sim-time" class="telemetry-value">--</div>
+      </div>
+      <div id="status-banner" class="status-message">Booting simulator...</div>
+    </footer>
+
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
